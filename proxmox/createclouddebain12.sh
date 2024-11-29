@@ -14,15 +14,27 @@ else
     echo "Debian cloud image already exists. Skipping download."
 fi
 
-# Prompt for VM details
-read -p "Enter VM ID: " VM_ID
-read -p "Enter VM Name: " VM_NAME
-read -p "Enter VM IP Address (e.g., 192.168.2.202/24): " VM_IP
-read -p "Enter Gateway (e.g., 192.168.2.1): " VM_GATEWAY
+# Prompt for VM details with defaults
+DEFAULT_VM_ID=9001
+DEFAULT_VM_NAME="Debian12"
+DEFAULT_VM_IP="192.168.2.21/24"
+DEFAULT_VM_GATEWAY="192.168.2.1"
+
+read -p "Enter VM ID [${DEFAULT_VM_ID}]: " VM_ID
+VM_ID=${VM_ID:-$DEFAULT_VM_ID}
+
+read -p "Enter VM Name [${DEFAULT_VM_NAME}]: " VM_NAME
+VM_NAME=${VM_NAME:-$DEFAULT_VM_NAME}
+
+read -p "Enter VM IP Address [${DEFAULT_VM_IP}]: " VM_IP
+VM_IP=${VM_IP:-$DEFAULT_VM_IP}
+
+read -p "Enter Gateway [${DEFAULT_VM_GATEWAY}]: " VM_GATEWAY
+VM_GATEWAY=${VM_GATEWAY:-$DEFAULT_VM_GATEWAY}
 
 # Create the VM
 echo "Creating VM..."
-qm create "$VM_ID" --name "$VM_NAME" --memory 2048 --cores 2 --net0 virtio,bridge=vmbr0
+qm create "$VM_ID" --name "$VM_NAME" --memory 4096 --cores 2 --net0 virtio,bridge=vmbr0
 
 # Import the disk
 echo "Importing disk..."
@@ -33,6 +45,10 @@ echo "Configuring VM..."
 qm set "$VM_ID" --scsihw virtio-scsi-pci --scsi0 local-lvm:vm-"$VM_ID"-disk-0
 qm set "$VM_ID" --boot c --bootdisk scsi0
 qm set "$VM_ID" --ide2 local-lvm:cloudinit
+
+# Resize the disk to 40GB
+echo "Resizing disk to 40GB..."
+qm resize "$VM_ID" scsi0 40G
 
 # Check if SSH key exists
 if [ ! -f "$SSH_KEY_FILE" ]; then
@@ -49,4 +65,3 @@ echo "Starting VM..."
 qm start "$VM_ID"
 
 echo "VM $VM_NAME with ID $VM_ID has been successfully created and started."
-
